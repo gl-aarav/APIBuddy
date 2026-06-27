@@ -14,25 +14,13 @@ struct KeychainManager: Sendable {
 
         try deleteKeyIfPresent(for: preset)
 
-        var accessControlError: Unmanaged<CFError>?
-        guard let accessControl = SecAccessControlCreateWithFlags(
-            nil,
-            kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-            .userPresence,
-            &accessControlError
-        ) else {
-            let message = accessControlError?.takeRetainedValue().localizedDescription ?? "Unknown Security.framework error."
-            throw KeychainError.accessControlCreationFailed(message)
-        }
-
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: preset.environmentVariable,
             kSecAttrLabel as String: "API Vault \(preset.serviceName) API Key",
             kSecAttrDescription as String: "API key protected by API Vault",
-            kSecAttrAccessControl as String: accessControl,
-            kSecUseDataProtectionKeychain as String: true,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             kSecValueData as String: secretData
         ]
 
@@ -42,21 +30,21 @@ struct KeychainManager: Sendable {
         }
     }
 
-    func fetchKey(for preset: Preset) throws -> String {
+    func fetchKey(for preset: Preset) async throws -> String {
         let context = LAContext()
-        context.localizedReason = "Authenticate to reveal \(preset.serviceName)'s API key."
+        let reason = "Authenticate to reveal \(preset.serviceName)'s API key."
+
+        // The generic-password item stays in the macOS keychain. We gate every
+        // app-level read behind native device-owner authentication so revealing
+        // or copying a secret always triggers Touch ID or the device password.
+        try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: preset.environmentVariable,
-            kSecUseDataProtectionKeychain as String: true,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-            // Accessing the protected item triggers the native macOS biometric
-            // or device-password sheet because the item was saved with
-            // SecAccessControlCreateWithFlags(..., .userPresence, ...).
-            kSecUseAuthenticationContext as String: context
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var result: CFTypeRef?
@@ -107,8 +95,7 @@ struct KeychainManager: Sendable {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: preset.environmentVariable,
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: preset.environmentVariable
         ]
     }
 }

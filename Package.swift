@@ -13,6 +13,9 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "APIVault",
+            resources: [
+                .process("Resources")
+            ],
             linkerSettings: [
                 .linkedFramework("AppKit"),
                 .linkedFramework("Security")

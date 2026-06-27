@@ -44,9 +44,8 @@ private struct PresetSidebarRow: View {
                     .lineLimit(1)
             }
         } icon: {
-            Image(systemName: preset.symbolName)
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(hasStoredKey ? preset.accent.color : .secondary)
+            PresetIconView(preset: preset, size: 19)
+                .opacity(hasStoredKey ? 1 : 0.7)
         }
         .badge(hasStoredKey ? "Saved" : "")
         .help(hasStoredKey ? "Stored in the system keychain" : "No key saved yet")

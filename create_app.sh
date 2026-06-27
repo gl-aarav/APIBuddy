@@ -5,6 +5,25 @@ APP_NAME="API Vault"
 EXECUTABLE_NAME="APIVault"
 BUNDLE_ID="com.aaravgoyal.apivault"
 SIGNING_IDENTITY="${CODE_SIGN_IDENTITY:--}"
+CODE_SIGN_TIMESTAMP="${CODE_SIGN_TIMESTAMP:-none}"
+
+if [[ "$SIGNING_IDENTITY" == "PLACEHOLDER" || "$SIGNING_IDENTITY" == "Developer ID Application: Your Name" ]]; then
+  echo "Error: Set CODE_SIGN_IDENTITY to a real signing identity, or leave it unset for ad-hoc signing."
+  exit 1
+fi
+
+case "$CODE_SIGN_TIMESTAMP" in
+  none)
+    TIMESTAMP_ARGS=(--timestamp=none)
+    ;;
+  secure)
+    TIMESTAMP_ARGS=(--timestamp)
+    ;;
+  *)
+    echo "Error: CODE_SIGN_TIMESTAMP must be 'none' or 'secure'."
+    exit 1
+    ;;
+esac
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
@@ -22,6 +41,10 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp "$ROOT_DIR/.build/release/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
 chmod 755 "$MACOS_DIR/$EXECUTABLE_NAME"
+
+if [[ -d "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" ]]; then
+  cp -R "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" "$RESOURCES_DIR/"
+fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -56,7 +79,17 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </plist>
 PLIST
 
-/usr/bin/codesign --force --deep --options runtime --timestamp=none --sign "$SIGNING_IDENTITY" "$APP_DIR"
+if [[ "$SIGNING_IDENTITY" == "-" ]]; then
+  echo "Using ad-hoc code signing. Set CODE_SIGN_IDENTITY for Developer ID or CI signing."
+elif ! /usr/bin/security find-identity -v -p codesigning | /usr/bin/grep -Fq "$SIGNING_IDENTITY"; then
+  echo "Error: Code signing identity not found: $SIGNING_IDENTITY"
+  echo "Run 'security find-identity -v -p codesigning' or set CODE_SIGN_IDENTITY."
+  exit 1
+else
+  echo "Using code signing identity: $SIGNING_IDENTITY"
+fi
+
+/usr/bin/codesign --force --deep --options runtime "${TIMESTAMP_ARGS[@]}" --sign "$SIGNING_IDENTITY" "$APP_DIR"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 
 echo "Created signed app: $APP_DIR"

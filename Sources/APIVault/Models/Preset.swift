@@ -36,6 +36,7 @@ struct Preset: Identifiable, Hashable, Sendable {
     let serviceName: String
     let environmentVariable: String
     let symbolName: String
+    let iconAssetName: String
     let accent: PresetAccent
     let category: PresetCategory
     let keyHint: String
@@ -49,6 +50,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "OpenAI",
             environmentVariable: "OPENAI_API_KEY",
             symbolName: "sparkles",
+            iconAssetName: "openai",
             accent: .green,
             category: .ai,
             keyHint: "sk-..."
@@ -58,6 +60,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "Anthropic",
             environmentVariable: "ANTHROPIC_API_KEY",
             symbolName: "brain.head.profile",
+            iconAssetName: "anthropic",
             accent: .orange,
             category: .ai,
             keyHint: "sk-ant-..."
@@ -67,6 +70,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "OpenRouter",
             environmentVariable: "OPENROUTER_API_KEY",
             symbolName: "arrow.triangle.branch",
+            iconAssetName: "openrouter",
             accent: .purple,
             category: .ai,
             keyHint: "sk-or-..."
@@ -76,6 +80,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "GitHub",
             environmentVariable: "GITHUB_TOKEN",
             symbolName: "chevron.left.forwardslash.chevron.right",
+            iconAssetName: "github",
             accent: .gray,
             category: .code,
             keyHint: "ghp_..."
@@ -85,6 +90,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "Stripe",
             environmentVariable: "STRIPE_API_KEY",
             symbolName: "creditcard",
+            iconAssetName: "stripe",
             accent: .blue,
             category: .payments,
             keyHint: "sk_live_..."
@@ -94,6 +100,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "Custom",
             environmentVariable: "CUSTOM_API_KEY",
             symbolName: "key",
+            iconAssetName: "custom",
             accent: .rose,
             category: .custom,
             keyHint: "Paste any developer secret"

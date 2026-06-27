@@ -26,10 +26,7 @@ struct PresetDetailView: View {
 
     private func header(for preset: Preset) -> some View {
         HStack(alignment: .center, spacing: 18) {
-            Image(systemName: preset.symbolName)
-                .font(.system(size: 34, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(preset.accent.color)
+            PresetIconView(preset: preset, size: 46)
                 .frame(width: 72, height: 72)
                 .glassEffect(.regular.tint(preset.accent.color.opacity(0.18)).interactive(), in: .rect(cornerRadius: 24))
                 .glassEffectID("icon-\(preset.id)", in: namespace)

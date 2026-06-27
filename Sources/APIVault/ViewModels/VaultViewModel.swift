@@ -85,7 +85,7 @@ final class VaultViewModel {
 
         let keychain = self.keychain
         await perform("Unlocked \(selectedPreset.serviceName) key.") {
-            try keychain.fetchKey(for: selectedPreset)
+            try await keychain.fetchKey(for: selectedPreset)
         } onSuccess: { key in
             revealedKey = key
         }
@@ -117,7 +117,7 @@ final class VaultViewModel {
 
         let keychain = self.keychain
         await perform("Copied export command for \(selectedPreset.serviceName).") {
-            let key = try keychain.fetchKey(for: selectedPreset)
+            let key = try await keychain.fetchKey(for: selectedPreset)
             let command = "export \(selectedPreset.environmentVariable)=\"\(Self.shellEscaped(key))\""
             return command
         } onSuccess: { command in
@@ -129,7 +129,7 @@ final class VaultViewModel {
 
     private func perform<Result: Sendable>(
         _ successMessage: String,
-        operation: @escaping @Sendable () throws -> Result,
+        operation: @escaping @Sendable () async throws -> Result,
         onSuccess: (Result) -> Void = { _ in }
     ) async {
         isWorking = true
@@ -138,7 +138,7 @@ final class VaultViewModel {
 
         do {
             let result = try await Task.detached {
-                try operation()
+                try await operation()
             }.value
             onSuccess(result)
             statusMessage = successMessage
