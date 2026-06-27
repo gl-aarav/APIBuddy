@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:API Vault}",
+            "name": "Debug APIVault",
+            "target": "APIVault",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug APIVault"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:API Vault}",
+            "name": "Release APIVault",
+            "target": "APIVault",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release APIVault"
+        }
+    ]
+}

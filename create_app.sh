@@ -1,9 +1,9 @@
 #!/bin/zsh
 set -euo pipefail
 
-APP_NAME="API Buddy"
-EXECUTABLE_NAME="APIBuddy"
-BUNDLE_ID="com.aaravgoyal.apibuddy"
+APP_NAME="API Vault"
+EXECUTABLE_NAME="APIVault"
+BUNDLE_ID="com.aaravgoyal.apivault"
 SIGNING_IDENTITY="${CODE_SIGN_IDENTITY:--}"
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -47,7 +47,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>26.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

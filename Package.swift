@@ -1,20 +1,21 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
-    name: "APIBuddy",
+    name: "APIVault",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v26)
     ],
     products: [
-        .executable(name: "APIBuddy", targets: ["APIBuddy"])
+        .executable(name: "APIVault", targets: ["APIVault"])
     ],
     targets: [
         .executableTarget(
-            name: "APIBuddy",
+            name: "APIVault",
             linkerSettings: [
-                .linkedFramework("AppKit")
+                .linkedFramework("AppKit"),
+                .linkedFramework("Security")
             ]
         )
     ]
