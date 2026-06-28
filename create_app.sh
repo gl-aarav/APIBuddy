@@ -41,11 +41,11 @@ swift build -c release
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
-cp "$ROOT_DIR/.build/release/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
+cp -X "$ROOT_DIR/.build/release/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
 chmod 755 "$MACOS_DIR/$EXECUTABLE_NAME"
 
 if [[ -d "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" ]]; then
-  cp -R "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" "$RESOURCES_DIR/"
+  cp -R -X "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" "$RESOURCES_DIR/"
 fi
 
 if [[ ! -d "$ICON_SOURCE" ]]; then
@@ -101,6 +101,9 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 </plist>
 PLIST
 
+printf "APPL????" > "$CONTENTS_DIR/PkgInfo"
+xattr -cr "$APP_DIR"
+
 if [[ "$SIGNING_IDENTITY" == "-" ]]; then
   echo "Using ad-hoc code signing. Set CODE_SIGN_IDENTITY for Developer ID or CI signing."
 elif ! /usr/bin/security find-identity -v -p codesigning | /usr/bin/grep -Fq "$SIGNING_IDENTITY"; then
@@ -113,5 +116,16 @@ fi
 
 /usr/bin/codesign --force --deep --options runtime "${TIMESTAMP_ARGS[@]}" --sign "$SIGNING_IDENTITY" "$APP_DIR"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_DIR"
+
+LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+if [[ -x "$LSREGISTER" ]]; then
+  "$LSREGISTER" -f "$APP_DIR"
+fi
+
+if command -v mdimport >/dev/null 2>&1; then
+  mdimport "$APP_DIR"
+fi
+
+touch "$APP_DIR"
 
 echo "Created signed app: $APP_DIR"
