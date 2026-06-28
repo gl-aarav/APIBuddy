@@ -8,23 +8,31 @@ final class VaultViewModel {
     let presets: [Preset]
 
     var selectedPresetID: Preset.ID?
-    var storedPresetIDs: Set<Preset.ID> = []
+    var entries: [APIKeyEntry] = []
     var searchText = ""
+    var draftLabel = ""
+    var draftEnvironmentVariable = ""
     var draftKey = ""
+    var revealedEntryID: APIKeyEntry.ID?
     var revealedKey: String?
     var isWorking = false
     var statusMessage: String?
     var errorMessage: String?
 
     private let keychain: KeychainManager
+    private let entryStore: VaultEntryStore
 
     init(
         presets: [Preset] = Preset.defaults,
-        keychain: KeychainManager = .shared
+        keychain: KeychainManager = .shared,
+        entryStore: VaultEntryStore = VaultEntryStore()
     ) {
         self.presets = presets
         self.keychain = keychain
+        self.entryStore = entryStore
+        entries = entryStore.loadEntries()
         selectedPresetID = presets.first?.id
+        resetDraftForSelectedPreset()
         refreshKeyPresence()
     }
 
@@ -34,8 +42,12 @@ final class VaultViewModel {
     }
 
     var selectedPresetHasStoredKey: Bool {
-        guard let selectedPreset else { return false }
-        return storedPresetIDs.contains(selectedPreset.id)
+        !selectedEntries.isEmpty
+    }
+
+    var selectedEntries: [APIKeyEntry] {
+        guard let selectedPreset else { return [] }
+        return entries(for: selectedPreset)
     }
 
     func presets(in category: PresetCategory) -> [Preset] {
@@ -50,14 +62,31 @@ final class VaultViewModel {
 
     func select(_ preset: Preset) {
         selectedPresetID = preset.id
+        revealedEntryID = nil
         revealedKey = nil
-        draftKey = ""
+        resetDraftForSelectedPreset()
         errorMessage = nil
         statusMessage = nil
     }
 
     func refreshKeyPresence() {
-        storedPresetIDs = Set(presets.filter { keychain.containsKey(for: $0) }.map(\.id))
+        let liveEntries = entries.filter { keychain.containsKey(for: $0) }
+        if liveEntries.count != entries.count {
+            entries = liveEntries
+            persistEntries()
+        }
+    }
+
+    func entries(for preset: Preset) -> [APIKeyEntry] {
+        entries
+            .filter { $0.presetID == preset.id }
+            .sorted { lhs, rhs in
+                if lhs.createdAt == rhs.createdAt {
+                    return lhs.label.localizedStandardCompare(rhs.label) == .orderedAscending
+                }
+
+                return lhs.createdAt < rhs.createdAt
+            }
     }
 
     func saveSelectedKey() async {
@@ -68,63 +97,85 @@ final class VaultViewModel {
             return
         }
 
+        let entry = APIKeyEntry(
+            id: UUID(),
+            presetID: selectedPreset.id,
+            label: normalizedDraftLabel(for: selectedPreset),
+            environmentVariable: normalizedDraftEnvironmentVariable(for: selectedPreset),
+            createdAt: Date()
+        )
         let keychain = self.keychain
-        await perform("Saved \(selectedPreset.serviceName) key.") {
-            try keychain.saveKey(trimmedKey, for: selectedPreset)
+        await perform("Saved \(entry.label).") {
+            try keychain.saveKey(trimmedKey, for: entry, preset: selectedPreset)
         }
 
         if errorMessage == nil {
+            entries.append(entry)
+            persistEntries()
             draftKey = ""
+            draftLabel = ""
+            draftEnvironmentVariable = selectedPreset.environmentVariable
+            revealedEntryID = nil
             revealedKey = nil
             refreshKeyPresence()
         }
     }
 
-    func revealSelectedKey() async {
+    func revealKey(_ entry: APIKeyEntry) async {
         guard let selectedPreset else { return }
 
         let keychain = self.keychain
-        await perform("Unlocked \(selectedPreset.serviceName) key.") {
-            try await keychain.fetchKey(for: selectedPreset)
+        await perform("Unlocked \(entry.label).") {
+            try await keychain.fetchKey(for: entry, preset: selectedPreset)
         } onSuccess: { key in
+            revealedEntryID = entry.id
             revealedKey = key
         }
     }
 
     func hideRevealedKey() {
+        revealedEntryID = nil
         revealedKey = nil
         statusMessage = "Key hidden."
         errorMessage = nil
     }
 
-    func deleteSelectedKey() async {
-        guard let selectedPreset else { return }
+    func deleteKey(_ entry: APIKeyEntry) async {
+        let deletedLabel = entry.label
 
         let keychain = self.keychain
-        await perform("Deleted \(selectedPreset.serviceName) key.") {
-            try keychain.deleteKey(for: selectedPreset)
+        await perform("Deleted \(deletedLabel).") {
+            try keychain.deleteKey(for: entry)
         }
 
         if errorMessage == nil {
-            draftKey = ""
-            revealedKey = nil
+            entries.removeAll { $0.id == entry.id }
+            persistEntries()
+            if revealedEntryID == entry.id {
+                revealedEntryID = nil
+                revealedKey = nil
+            }
             refreshKeyPresence()
         }
     }
 
-    func copyExportCommand() async {
+    func copyExportCommand(for entry: APIKeyEntry) async {
         guard let selectedPreset else { return }
 
         let keychain = self.keychain
-        await perform("Copied export command for \(selectedPreset.serviceName).") {
-            let key = try await keychain.fetchKey(for: selectedPreset)
-            let command = "export \(selectedPreset.environmentVariable)=\"\(Self.shellEscaped(key))\""
+        await perform("Copied export command for \(entry.label).") {
+            let key = try await keychain.fetchKey(for: entry, preset: selectedPreset)
+            let command = "export \(entry.environmentVariable)=\"\(Self.shellEscaped(key))\""
             return command
         } onSuccess: { command in
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(command, forType: .string)
         }
+    }
+
+    func exportTemplate(for entry: APIKeyEntry) -> String {
+        entry.exportTemplate
     }
 
     private func perform<Result: Sendable>(
@@ -157,5 +208,33 @@ final class VaultViewModel {
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "$", with: "\\$")
             .replacingOccurrences(of: "`", with: "\\`")
+    }
+
+    private func resetDraftForSelectedPreset() {
+        draftLabel = ""
+        draftKey = ""
+        draftEnvironmentVariable = selectedPreset?.environmentVariable ?? ""
+    }
+
+    private func normalizedDraftLabel(for preset: Preset) -> String {
+        let trimmedLabel = draftLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedLabel.isEmpty {
+            return trimmedLabel
+        }
+
+        return "\(preset.serviceName) Key \(entries(for: preset).count + 1)"
+    }
+
+    private func normalizedDraftEnvironmentVariable(for preset: Preset) -> String {
+        let trimmedTag = draftEnvironmentVariable.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedTag.isEmpty ? preset.environmentVariable : trimmedTag
+    }
+
+    private func persistEntries() {
+        do {
+            try entryStore.saveEntries(entries)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

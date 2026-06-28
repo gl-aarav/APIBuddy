@@ -12,7 +12,7 @@ struct SidebarView: View {
                         ForEach(categoryPresets) { preset in
                             PresetSidebarRow(
                                 preset: preset,
-                                hasStoredKey: viewModel.storedPresetIDs.contains(preset.id)
+                                storedKeyCount: viewModel.entries(for: preset).count
                             )
                             .tag(preset.id)
                             .onTapGesture {
@@ -31,7 +31,7 @@ struct SidebarView: View {
 
 private struct PresetSidebarRow: View {
     let preset: Preset
-    let hasStoredKey: Bool
+    let storedKeyCount: Int
 
     var body: some View {
         Label {
@@ -45,9 +45,9 @@ private struct PresetSidebarRow: View {
             }
         } icon: {
             PresetIconView(preset: preset, size: 19)
-                .opacity(hasStoredKey ? 1 : 0.7)
+                .opacity(storedKeyCount > 0 ? 1 : 0.7)
         }
-        .badge(hasStoredKey ? "Saved" : "")
-        .help(hasStoredKey ? "Stored in the system keychain" : "No key saved yet")
+        .badge(storedKeyCount > 0 ? "\(storedKeyCount)" : "")
+        .help(storedKeyCount > 0 ? "\(storedKeyCount) keychain item(s)" : "No key saved yet")
     }
 }

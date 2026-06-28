@@ -10,9 +10,9 @@ struct PresetDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         header(for: preset)
-                        secretPanel(for: preset)
+                        keysPanel(for: preset)
                         savePanel(for: preset)
-                        quickActions(for: preset)
+                        messagePanel
                     }
                     .padding(34)
                     .frame(maxWidth: 760, alignment: .leading)
@@ -41,44 +41,39 @@ struct PresetDetailView: View {
 
             Spacer()
 
-            StoredStateBadge(isStored: viewModel.selectedPresetHasStoredKey)
+            StoredStateBadge(count: viewModel.selectedEntries.count)
         }
     }
 
-    private func secretPanel(for preset: Preset) -> some View {
+    private func keysPanel(for preset: Preset) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Stored Secret", systemImage: "lock.shield")
+            Label("API Keys", systemImage: "lock.shield")
                 .font(.headline)
 
-            HStack(spacing: 12) {
-                Text(viewModel.revealedKey ?? preset.maskedValue)
-                    .font(.system(.title3, design: .monospaced, weight: .semibold))
-                    .textSelection(.enabled)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentTransition(.numericText())
-
-                if viewModel.revealedKey == nil {
-                    Button {
-                        Task { await viewModel.revealSelectedKey() }
-                    } label: {
-                        Label("Reveal", systemImage: "touchid")
-                    }
-                    .disabled(!viewModel.selectedPresetHasStoredKey || viewModel.isWorking)
-                } else {
-                    Button {
-                        viewModel.hideRevealedKey()
-                    } label: {
-                        Label("Hide", systemImage: "eye.slash")
-                    }
-                    .disabled(viewModel.isWorking)
-                }
-            }
-
-            if !viewModel.selectedPresetHasStoredKey {
-                Text("Save a key below to create a biometric-protected keychain item.")
+            if viewModel.selectedEntries.isEmpty {
+                Text("Save a key below to create a protected keychain item.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(viewModel.selectedEntries) { entry in
+                        APIKeyEntryRow(
+                            entry: entry,
+                            revealedKey: viewModel.revealedEntryID == entry.id ? viewModel.revealedKey : nil,
+                            isWorking: viewModel.isWorking,
+                            onReveal: {
+                                Task { await viewModel.revealKey(entry) }
+                            },
+                            onHide: viewModel.hideRevealedKey,
+                            onCopy: {
+                                Task { await viewModel.copyExportCommand(for: entry) }
+                            },
+                            onDelete: {
+                                Task { await viewModel.deleteKey(entry) }
+                            }
+                        )
+                    }
+                }
             }
         }
         .padding(22)
@@ -90,8 +85,15 @@ struct PresetDetailView: View {
 
     private func savePanel(for preset: Preset) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Save or Replace Key", systemImage: "square.and.arrow.down")
+            Label("Add API Key", systemImage: "square.and.arrow.down")
                 .font(.headline)
+
+            TextField("Label, for example Production", text: Bindable(viewModel).draftLabel)
+                .textFieldStyle(.roundedBorder)
+
+            TextField("Environment variable", text: Bindable(viewModel).draftEnvironmentVariable)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(.body, design: .monospaced))
 
             SecureField("Paste API key, for example \(preset.keyHint)", text: Bindable(viewModel).draftKey)
                 .textFieldStyle(.roundedBorder)
@@ -101,17 +103,10 @@ struct PresetDetailView: View {
                 Button {
                     Task { await viewModel.saveSelectedKey() }
                 } label: {
-                    Label(viewModel.selectedPresetHasStoredKey ? "Replace Key" : "Save Key", systemImage: "key.fill")
+                    Label("Save Key", systemImage: "key.fill")
                 }
                 .keyboardShortcut("s", modifiers: [.command])
                 .disabled(viewModel.draftKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isWorking)
-
-                Button(role: .destructive) {
-                    Task { await viewModel.deleteSelectedKey() }
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-                .disabled(!viewModel.selectedPresetHasStoredKey || viewModel.isWorking)
 
                 Spacer()
 
@@ -127,27 +122,8 @@ struct PresetDetailView: View {
         .buttonBorderShape(.capsule)
     }
 
-    private func quickActions(for preset: Preset) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("Quick Actions", systemImage: "terminal")
-                .font(.headline)
-
-            Text(preset.exportTemplate)
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-
-            HStack {
-                Button {
-                    Task { await viewModel.copyExportCommand() }
-                } label: {
-                    Label("Copy Export Command", systemImage: "doc.on.doc")
-                }
-                .disabled(!viewModel.selectedPresetHasStoredKey || viewModel.isWorking)
-
-                Spacer()
-            }
-
+    private var messagePanel: some View {
+        Group {
             if let statusMessage = viewModel.statusMessage {
                 Label(statusMessage, systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
@@ -160,22 +136,85 @@ struct PresetDetailView: View {
                     .font(.callout)
             }
         }
-        .padding(22)
-        .glassEffect(.regular, in: .rect(cornerRadius: 26))
-        .buttonStyle(.glass)
-        .buttonBorderShape(.capsule)
+        .padding(.horizontal, 4)
     }
 }
 
 private struct StoredStateBadge: View {
-    let isStored: Bool
+    let count: Int
 
     var body: some View {
-        Label(isStored ? "Saved" : "Empty", systemImage: isStored ? "checkmark.seal.fill" : "circle.dashed")
+        Label(count == 1 ? "1 Key" : "\(count) Keys", systemImage: count > 0 ? "checkmark.seal.fill" : "circle.dashed")
             .font(.callout.weight(.semibold))
-            .foregroundStyle(isStored ? .green : .secondary)
+            .foregroundStyle(count > 0 ? .green : .secondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
             .glassEffect(.regular.interactive(), in: .capsule)
+    }
+}
+
+private struct APIKeyEntryRow: View {
+    let entry: APIKeyEntry
+    let revealedKey: String?
+    let isWorking: Bool
+    let onReveal: () -> Void
+    let onHide: () -> Void
+    let onCopy: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(entry.label)
+                        .font(.headline)
+                    Text(entry.environmentVariable)
+                        .font(.callout.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    if revealedKey == nil {
+                        onReveal()
+                    } else {
+                        onHide()
+                    }
+                } label: {
+                    Label(revealedKey == nil ? "Reveal" : "Hide", systemImage: revealedKey == nil ? "touchid" : "eye.slash")
+                }
+                .disabled(isWorking)
+
+                Button {
+                    onCopy()
+                } label: {
+                    Label("Copy Export", systemImage: "doc.on.doc")
+                }
+                .disabled(isWorking)
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(isWorking)
+            }
+
+            Text(revealedKey ?? entry.maskedValue)
+                .font(.system(.body, design: .monospaced, weight: .semibold))
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(entry.exportTemplate)
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+        .padding(16)
+        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .buttonStyle(.glass)
+        .buttonBorderShape(.capsule)
     }
 }
