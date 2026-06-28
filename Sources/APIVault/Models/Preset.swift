@@ -100,7 +100,7 @@ struct Preset: Identifiable, Hashable, Sendable {
             serviceName: "Custom",
             environmentVariable: "CUSTOM_API_KEY",
             symbolName: "key",
-            iconAssetName: "custom",
+            iconAssetName: "",
             accent: .rose,
             category: .custom,
             keyHint: "Paste any developer secret"

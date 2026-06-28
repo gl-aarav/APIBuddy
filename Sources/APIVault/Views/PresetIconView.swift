@@ -32,6 +32,10 @@ final class PresetIconCache {
     private init() { }
 
     func image(named name: String) -> NSImage? {
+        guard !name.isEmpty else {
+            return nil
+        }
+
         if let cachedImage = cachedImages[name] {
             return cachedImage
         }

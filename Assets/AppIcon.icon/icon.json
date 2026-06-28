@@ -9,6 +9,7 @@
     {
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "Key.png",
           "name" : "Key"
         }
