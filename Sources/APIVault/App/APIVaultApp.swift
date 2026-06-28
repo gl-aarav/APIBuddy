@@ -19,7 +19,7 @@ struct APIVaultApp: App {
 
         MenuBarExtra("API Vault", systemImage: "key.fill") {
             MenuBarVaultView(viewModel: viewModel)
-                .frame(width: 360)
+                .frame(width: 460, alignment: .topLeading)
         }
         .menuBarExtraStyle(.window)
     }

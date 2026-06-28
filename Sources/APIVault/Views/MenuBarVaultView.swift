@@ -4,7 +4,7 @@ struct MenuBarVaultView: View {
     var viewModel: VaultViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "key.fill")
                     .font(.title3)
@@ -24,26 +24,31 @@ struct MenuBarVaultView: View {
             Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(PresetCategory.allCases) { category in
-                        let categoryPresets = viewModel.presetsWithEntries(in: category)
-                        if !categoryPresets.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(category.rawValue)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 8)
+                if viewModel.entries.isEmpty {
+                    ContentUnavailableView("No Saved APIs", systemImage: "key.slash")
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                } else {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(PresetCategory.allCases) { category in
+                            let categoryPresets = viewModel.presetsWithEntries(in: category)
+                            if !categoryPresets.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(category.rawValue)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 8)
 
-                                VStack(spacing: 6) {
-                                    ForEach(categoryPresets) { preset in
-                                        ForEach(viewModel.entries(for: preset)) { entry in
-                                            MenuBarAPIEntryRow(
-                                                preset: preset,
-                                                entry: entry,
-                                                isWorking: viewModel.isWorking
-                                            ) {
-                                                Task {
-                                                    await viewModel.copyExportCommand(for: entry, preset: preset)
+                                    VStack(spacing: 8) {
+                                        ForEach(categoryPresets) { preset in
+                                            ForEach(viewModel.entries(for: preset)) { entry in
+                                                MenuBarAPIEntryRow(
+                                                    preset: preset,
+                                                    entry: entry,
+                                                    isWorking: viewModel.isWorking
+                                                ) {
+                                                    Task {
+                                                        await viewModel.copyExportCommand(for: entry, preset: preset)
+                                                    }
                                                 }
                                             }
                                         }
@@ -52,8 +57,8 @@ struct MenuBarVaultView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 430)
 
@@ -62,6 +67,7 @@ struct MenuBarVaultView: View {
                     .font(.caption)
                     .foregroundStyle(.green)
                     .lineLimit(2)
+                    .padding(.top, 8)
             }
 
             if let errorMessage = viewModel.errorMessage {
@@ -69,9 +75,13 @@ struct MenuBarVaultView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
                     .lineLimit(2)
+                    .padding(.top, 8)
             }
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 }
 
