@@ -31,6 +31,8 @@ APP_DIR="$BUILD_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icon"
+ICON_NAME="AppIcon"
 
 cd "$ROOT_DIR"
 
@@ -46,6 +48,22 @@ if [[ -d "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" ]]; then
   cp -R "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" "$RESOURCES_DIR/"
 fi
 
+if [[ ! -d "$ICON_SOURCE" ]]; then
+  echo "Error: Missing native app icon: $ICON_SOURCE"
+  exit 1
+fi
+
+xcrun actool "$ICON_SOURCE" \
+  --compile "$RESOURCES_DIR" \
+  --app-icon "$ICON_NAME" \
+  --enable-on-demand-resources NO \
+  --development-region en \
+  --target-device mac \
+  --platform macosx \
+  --include-all-app-icons \
+  --minimum-deployment-target 26.0 \
+  --output-partial-info-plist "$BUILD_DIR/icon-partial.plist" >/dev/null
+
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -59,6 +77,10 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <string>$EXECUTABLE_NAME</string>
     <key>CFBundleIdentifier</key>
     <string>$BUNDLE_ID</string>
+    <key>CFBundleIconFile</key>
+    <string>$ICON_NAME</string>
+    <key>CFBundleIconName</key>
+    <string>$ICON_NAME</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
