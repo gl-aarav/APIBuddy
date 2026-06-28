@@ -7,7 +7,12 @@ import Observation
 final class VaultViewModel {
     let presets: [Preset]
 
-    var selectedPresetID: Preset.ID?
+    var selectedPresetID: Preset.ID? {
+        didSet {
+            guard oldValue != selectedPresetID else { return }
+            handleSelectedPresetChange()
+        }
+    }
     var entries: [APIKeyEntry] = []
     var searchText = ""
     var draftLabel = ""
@@ -62,11 +67,6 @@ final class VaultViewModel {
 
     func select(_ preset: Preset) {
         selectedPresetID = preset.id
-        revealedEntryID = nil
-        revealedKey = nil
-        resetDraftForSelectedPreset()
-        errorMessage = nil
-        statusMessage = nil
     }
 
     func refreshKeyPresence() {
@@ -214,6 +214,14 @@ final class VaultViewModel {
         draftLabel = ""
         draftKey = ""
         draftEnvironmentVariable = selectedPreset?.environmentVariable ?? ""
+    }
+
+    private func handleSelectedPresetChange() {
+        revealedEntryID = nil
+        revealedKey = nil
+        resetDraftForSelectedPreset()
+        errorMessage = nil
+        statusMessage = nil
     }
 
     private func normalizedDraftLabel(for preset: Preset) -> String {

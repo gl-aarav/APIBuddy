@@ -15,9 +15,6 @@ struct SidebarView: View {
                                 storedKeyCount: viewModel.entries(for: preset).count
                             )
                             .tag(preset.id)
-                            .onTapGesture {
-                                viewModel.select(preset)
-                            }
                         }
                     }
                 }
