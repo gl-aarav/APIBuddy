@@ -15,6 +15,12 @@ struct APIVaultApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) { }
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates...") {
+                    SparkleUpdater.shared.checkForUpdates()
+                }
+                .disabled(!SparkleUpdater.shared.canCheckForUpdates)
+            }
         }
 
         MenuBarExtra("API Vault", systemImage: "key.fill") {

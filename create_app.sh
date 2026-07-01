@@ -43,9 +43,15 @@ mkdir -p "$MACOS_DIR" "$RESOURCES_DIR"
 
 cp -X "$ROOT_DIR/.build/release/$EXECUTABLE_NAME" "$MACOS_DIR/$EXECUTABLE_NAME"
 chmod 755 "$MACOS_DIR/$EXECUTABLE_NAME"
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$MACOS_DIR/$EXECUTABLE_NAME" || true
 
 if [[ -d "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" ]]; then
   cp -R -X "$ROOT_DIR/.build/release/APIVault_APIVault.bundle" "$RESOURCES_DIR/"
+fi
+
+if [[ -d "$ROOT_DIR/.build/release/Sparkle.framework" ]]; then
+  mkdir -p "$CONTENTS_DIR/Frameworks"
+  cp -R -X "$ROOT_DIR/.build/release/Sparkle.framework" "$CONTENTS_DIR/Frameworks/"
 fi
 
 if [[ ! -d "$ICON_SOURCE" ]]; then
@@ -88,7 +94,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0</string>
+    <string>1.0.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
@@ -97,6 +103,10 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>SUFeedURL</key>
+    <string>https://raw.githubusercontent.com/gl-aarav/APIVault/main/appcast.xml</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
 </dict>
 </plist>
 PLIST

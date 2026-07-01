@@ -4,3 +4,5 @@ build/
 *.xcuserdata/
 DerivedData/
 createapp.sh
+create_release.sh
+
