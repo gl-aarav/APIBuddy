@@ -22,7 +22,7 @@
           <li><strong>Native Updater:</strong> Seamless, secure background updates powered by the Sparkle framework.</li>
         </ul>
       ]]></description>
-      <enclosure url="https://github.com/gl-aarav/APIVault/releases/download/v1.0.0/API%20Vault.dmg" 
+      <enclosure url="https://github.com/gl-aarav/APIVault/releases/download/v1.0.0/API.Vault.dmg" 
                  type="application/octet-stream" 
                  sparkle:version="1.0.0" 
                  sparkle:shortVersionString="1.0.0" />
